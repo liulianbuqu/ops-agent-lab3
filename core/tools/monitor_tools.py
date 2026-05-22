@@ -849,19 +849,28 @@ def prometheus_health_check(
 
         version = build_info.get("data", {}).get("version", "unknown")
 
-        # 检查有多少活跃的 Targets
-        prom = _get_prometheus_client(prometheus_url)
-        targets = prom.all_targets()
-        up_count = sum(1 for t in targets if t.get("health") == "up") if targets else 0
-        total_count = len(targets) if targets else 0
+        # 尝试获取 Targets 信息（可能因版本不同而不支持）
+        targets_info = ""
+        try:
+            prom = _get_prometheus_client(prometheus_url)
+            # 通过 Prometheus API 获取目标状态
+            import urllib.request
+            targets_url = f"{prometheus_url}/api/v1/targets"
+            with urllib.request.urlopen(targets_url, timeout=5) as resp:
+                targets_data = json.loads(resp.read().decode())
+            targets = targets_data.get("data", {}).get("activeTargets", [])
+            up_count = sum(1 for t in targets if t.get("health") == "up")
+            total_count = len(targets)
+            targets_info = f"\n  活跃 Targets: {up_count}/{total_count}"
+        except Exception:
+            targets_info = "\n  活跃 Targets: (无法获取)"
 
         return (
             f"✅ Prometheus 健康检查通过\n"
             f"{'='*40}\n"
             f"  状态: {'Running' if ready else 'Unhealthy'}\n"
             f"  版本: {version}\n"
-            f"  地址: {prometheus_url}\n"
-            f"  活跃 Targets: {up_count}/{total_count}\n"
+            f"  地址: {prometheus_url}{targets_info}\n"
             f"{'='*40}\n"
             f"💡 Prometheus 运行正常，可执行监控查询。"
         )
