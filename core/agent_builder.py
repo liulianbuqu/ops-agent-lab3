@@ -1,6 +1,9 @@
 """
 智能体构建模块
 组装 LLM、Tools、Prompt 为完整的 ReAct Agent
+
+本模块专为"智能监控问答助手（场景一）"设计，
+聚焦于 Prometheus 指标查询与自然语言问答。
 """
 from langchain.agents import initialize_agent, AgentType
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -8,25 +11,6 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from core.helper.llm_util import init_llm
 from core.prompts.ops_agent_prompt import MONITORING_SYSTEM_PROMPT
 
-from core.tools.file_tools import (
-    file_read_tool,
-    file_write_tool,
-    file_list_tool,
-)
-from core.tools.docker_tools import (
-    dockerfile_generate_tool,
-    image_build_tool,
-    container_run_tool,
-    container_exec_cmd_tool,
-    container_logs_tool,
-)
-from core.tools.k8s_tools import (
-    k8s_yaml_generate_tool,
-    k8s_apply_tool,
-    k8s_pod_status_tool,
-    k8s_delete_tool,
-    k8s_namespace_tool,
-)
 from core.tools.monitor_tools import (
     prometheus_query_tool,
     query_pod_cpu_usage,
@@ -44,17 +28,25 @@ from core.tools.failure_tools import (
 )
 
 
-class OpsAgent:
+class MonitorAgent:
     """
-    Ops Agent — 运维智能体
+    MonitorAgent — 智能监控问答助手
 
-    一个基于 LangChain ReAct 模式的智能运维助手，
-    能够通过自然语言交互完成 Docker/K8s 部署、监控查询、故障诊断等任务。
+    一个基于 LangChain ReAct 模式的智能监控助手，
+    专为"智能监控问答助手（场景一）"设计。
+    
+    核心能力：
+    - 通过自然语言查询 Prometheus 中的 CPU、内存、网络等指标
+    - 自动选择合适的 PromQL 并调用 Prometheus API
+    - 生成结构化的监控分析报告
+    - 支持时序数据趋势分析与 matplotlib 可视化
+    - 一站式命名空间健康评估
+    - 故障自诊断（当查询失败时分析根因）
     """
 
     def __init__(self, logger=None, verbose: bool = True):
         """
-        初始化 OpsAgent。
+        初始化 MonitorAgent。
 
         Args:
             logger: 可选的日志记录器实例
@@ -66,7 +58,7 @@ class OpsAgent:
         # 初始化 LLM
         self.llm = init_llm()
 
-        # 注册所有工具
+        # 注册所有工具（以监控工具为核心）
         self.tools = self._init_tools()
 
         # 构建智能体
@@ -74,45 +66,28 @@ class OpsAgent:
 
         if self.logger:
             self.logger.info(
-                f"OpsAgent 初始化完成，已注册 {len(self.tools)} 个工具"
+                f"MonitorAgent 初始化完成，已注册 {len(self.tools)} 个监控工具"
             )
 
     def _init_tools(self):
-        """初始化并返回所有可用的工具列表（使用 @tool 装饰器原生的结构化工具）。"""
+        """初始化并返回所有可用的监控工具列表。"""
         return [
-            # ===== 文件操作工具 =====
-            file_read_tool,
-            file_write_tool,
-            file_list_tool,
+            # ===== 监控专用工具（9个） =====
+            prometheus_query_tool,          # 通用 PromQL 底层查询
+            query_pod_cpu_usage,            # Pod CPU 使用率排名
+            query_pod_memory_usage,         # Pod 内存使用排名
+            query_pod_restart_count,        # Pod 重启次数检测
+            query_namespace_health_report,  # 一站式命名空间健康报告
+            query_cpu_trend,                # CPU 趋势 + 折线图
+            query_memory_trend,             # 内存趋势 + 折线图
+            query_pod_network_io,           # 网络 I/O 查询
+            prometheus_health_check,        # Prometheus 健康检查
 
-            # ===== Docker 工具 =====
-            dockerfile_generate_tool,
-            image_build_tool,
-            container_run_tool,
-            container_exec_cmd_tool,
-            container_logs_tool,
+            # ===== 分布式追踪 =====
+            jaeger_query_tool,              # Jaeger 调用链查询
 
-            # ===== Kubernetes 工具 =====
-            k8s_yaml_generate_tool,
-            k8s_apply_tool,
-            k8s_pod_status_tool,
-            k8s_delete_tool,
-            k8s_namespace_tool,
-
-            # ===== 监控工具 =====
-            prometheus_query_tool,
-            query_pod_cpu_usage,
-            query_pod_memory_usage,
-            query_pod_restart_count,
-            query_namespace_health_report,
-            query_cpu_trend,
-            query_memory_trend,
-            query_pod_network_io,
-            prometheus_health_check,
-            jaeger_query_tool,
-
-            # ===== 故障诊断工具 =====
-            failure_diagnosis_tool,
+            # ===== 故障诊断 =====
+            failure_diagnosis_tool,         # 基于 LLM 的故障根因分析
         ]
 
     def _build_agent(self):
@@ -163,7 +138,7 @@ class OpsAgent:
             self.logger.info(f"用户输入: {query}")
 
         print(f"\n{'='*60}")
-        print(f"  OpsAgent 开始执行任务...")
+        print(f"  MonitorAgent 开始执行监控任务...")
         print(f"{'='*60}\n")
 
         try:
