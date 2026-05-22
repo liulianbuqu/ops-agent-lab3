@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-node-app
+  namespace: test-app
+  labels:
+    app: test-node-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-node-app
+  template:
+    metadata:
+      labels:
+        app: test-node-app
+    spec:
+      containers:
+      - name: test-node-app
+        image: test-node-app:latest
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: 200m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-node-app
+  namespace: test-app
+  labels:
+    app: test-node-app
+spec:
+  type: NodePort
+  selector:
+    app: test-node-app
+  ports:
+  - port: 3000
+    targetPort: 3000
+    nodePort: 30080

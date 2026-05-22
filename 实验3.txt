@@ -1,0 +1,507 @@
+1. 案例概述
+《智能体服务》实验案例是面向软件工程专业学生开设的创新性实践环节，该案例紧密衔接《软件服务工程》课程中微服务架构与云原生技术的核心内容，旨在引导学生探索大语言模型（Large Language Models, LLM）驱动的智能体技术在微服务系统构建与运维场景中的前沿应用。
+随着人工智能技术的快速发展，基于大语言模型的智能体（AI Agent）正逐步从概念验证走向工程实践，成为提升软件工程效率与质量的重要技术范式。本实验案例聚焦智能体服务这一新兴形态，要求学生将前期掌握的 Docker 容器化技术、Kubernetes 集群编排能力与自然语言处理、提示词工程（Prompt Engineering）、工具调用（Tool Use）等智能体开发技能相融合，设计并实现一个能够辅助完成微服务系统部署与运维任务的智能体应用（Ops Agent）。
+通过本实验的系统训练，学生将深入理解智能体如何作为一种新型服务形态被封装与提供，掌握智能体的自主决策机制、任务规划能力与工具链集成方法；能够运用 LLM 的语义理解与代码生成能力，实现对 Kubernetes 资源配置文件的智能生成、部署流程的自动化编排以及运维问题的诊断与修复建议；最终具备将智能体技术与传统服务化架构相结合，构建具备实际工程价值的智能运维辅助系统的能力。
+2. 案例教学目标
+通过本实验课的学习与实践训练，学生将为从事软件服务工程和智能体应用领域的工程技术或科学研究工作奠定良好的技术基础。具体教学目标如下：
+1. 掌握智能体服务架构与核心机制：学生能够准确阐释基于大语言模型的智能体作为新型服务形态的封装原理，理解其自主任务规划、上下文记忆管理与工具调用机制，为探索智能化软件服务范式奠定坚实的理论基础。
+2. 掌握提示词工程与运维工具链集成：学生能够熟练运用结构化提示词设计与函数调用（Function Calling）技术，实现智能体与 Docker、Kubernetes API 等底层设施的安全交互，掌握将自然语言运维意图转化为标准化工程指令的技术路径。
+3. 构建自动化微服务部署与运维流水线：学生能够基于智能体决策引擎，设计并实现覆盖源码解析、镜像构建、K8s 资源清单生成与集群发布的 Ops Agent 原型，具备利用人工智能技术重构传统微服务交付流程的工程实践能力。
+4. 形成智能系统评估与前沿研究素养：学生能够建立多维验证体系对智能体生成的配置代码与运维策略进行可靠性测试与迭代调优，剖析其在复杂分布式场景中的能力边界与幻觉风险，为未来从事智能运维技术研发或软件服务工程领域的科学研究工作奠定扎实的方法论基础。
+3. 案例背景知识
+为达到最好的实验效果，本课程要求学生了解以下背景知识：
+3.1 什么是智能体
+智能体（Agent）是一个以大型语言模型（LLM）为核心“大脑”的先进系统，它被设计用来超越简单的问答，实现自主地进行“思考”和“行动”。“思考”指的是智能体利用 LLM 强大的推理能力来分析一个复杂的目标（例如，“帮我找出上周关于A公司的市场报告，并总结其核心观点”），然后将这个模糊的目标分解成一系列清晰、可执行的具体步骤。“行动”则是通过智能体被授予的一套“工具（Tools）”来实现的；这些工具本质上是它可以调用的外部函数，使其能够突破 LLM 的自身局限，与真实世界交互，例如：进行实时网络搜索、在服务器终端执行命令、读写本地文件、查询数据库或调用任何第三方 API。
+智能体的工作模式是一个被称为 ReAct（Reasoning + Action） 的动态循环：它首先思考（Thought） 下一步该做什么，然后从工具库中选择一个最合适的工具去行动（Action），接着观察（Observation） 该行动返回的结果，最后，它会基于这个新信息回到思考阶段，评估任务是否完成或规划下一步行动。如此往复，直到最初的复杂目标被最终完成。这与“链（Chains）”不同，链的执行步骤是预先固定的，而智能体则是由 LLM 自主决定每一步的路径。
+3.2 智能体的必要性
+传统的 LLM 调用模式是“一次性”的响应。你提出一个问题，它给出一个答案。这种模式在功能上有几个难以逾越的关键局限：知识局限性：LLM 的知识完全截止于其训练数据，它无法获知昨天发生的新闻，更无法访问你公司的内部数据库或私有文档。缺乏能动性：LLM 无法“做”任何事。它只是一个文本生成器，不能帮你预订机票、在日历上创建提醒、发送邮件或在数据库中执行订单查询。无法处理复杂任务：如果一个任务需要多个逻辑步骤（比如“先搜索A，再根据A的结果计算B，最后对比B和C”），你必须作为人类用户手动分步向 LLM 提问并“Pipelining（人工串联）”结果。
+智能体（Agents）正是为了克服上述所有局限性而生的。通过赋予 LLM 自主规划和使用工具的能力，智能体可以自主规划并执行多步骤任务，而无需人工干预每一步；通过工具，智能体可以连接到互联网、API、数据库和文件系统，从而获取实时信息并与真实世界的系统互动；最重要的是，智能体是主动的，它们会根据环境反馈和工具返回的结果动态调整自己的计划，表现出真正的“智能”和解决复杂问题的能力。
+3.3 LangChain 智能体开发框架
+尽管智能体在理论上具备了自主决策与工具调用的能力，但在工程实践中，直接基于原生 LLM API 构建具备稳定记忆管理、复杂工具路由与动态执行流的智能体系统仍面临较高的开发门槛。为此，LangChain 框架应运而生。该框架旨在为大语言模型应用提供标准化、模块化的开发基础设施，核心目标是解决 LLM 集成过程中的上下文状态管理、提示词工程规范化、外部工具链安全接入以及多步骤任务编排等工程痛点。
+LangChain 通过高度抽象的组件体系重构了智能体的构建范式：(1)“提示词模板（Prompt Templates）”与“记忆模块（Memory）”确保智能体能够维持长程对话状态与业务上下文一致性；(2)“工具绑定（Tool Binding）”与“执行器（Executor）”机制原生支持 ReAct 范式，使 LLM 能够安全、可控地调用预定义的外部函数并解析返回结果；(3)“链式编排（Chains）”与“路由逻辑（Routing）”则进一步支持确定性工作流与条件分支的混合架构。
+在本实验中，LangChain 将作为构建运维智能体（Ops Agent）的核心脚手架，使学生能够聚焦于 Kubernetes 运维工具的定义与业务逻辑设计，而由框架底层自动处理模型交互、异常重试、上下文裁剪与执行状态追踪，从而高效实现智能体在微服务系统中的应用。
+3.4 基于 LangChain 构建智能体服务的步骤
+构建一个具备工程实用价值的智能体服务（Agent Service）并非单一模型的简单调用，而是一个涉及提示词工程、工具链集成、状态管理与执行控制的系统工程。基于 LangChain 框架，构建面向微服务运维的智能体（Ops Agent）通常遵循以下六个核心步骤：
+1. 编写详细的系统提示词（System Prompt Engineering）：系统提示词是智能体的“角色设定”与“行为准则”。在本实验中，学生需编写包含明确角色定义（如“你是一个精通 Kubernetes 的运维专家”）、任务边界（如“仅处理部署与监控相关请求”）及安全约束（如“禁止执行删除生产环境数据的命令”）的提示词模板。高质量的系统提示词能够显著减少模型的幻觉（Hallucination），引导 LLM 在复杂的运维场景中输出符合行业规范的建议与操作指令。
+2. 创建可与外部数据集成的工具（Tool Integration）：工具是智能体突破 LLM 知识截止限制、与真实世界交互的关键接口。学生需基于 LangChain 的 @tool 装饰器或 BaseTool 类，将 Docker API、Kubernetes Python Client 或 Prometheus 查询接口封装为智能体可调用的标准工具。每个工具需明确定义名称（Name）、描述（Description，供 LLM 理解工具用途）及输入参数模式（Args Schema）。通过工具集成，智能体得以执行如“查询 Pod 状态”、“获取节点资源利用率”或“滚动更新 Deployment”等实质性运维操作。
+3. 配置模型参数（Model Configuration）：为确保智能体在运维场景下的行为一致性与可靠性，学生需对底层 LLM 的关键参数进行精细化配置。例如，将 temperature 参数设置为较低值（如 0.0 - 0.2），以降低生成的随机性，确保针对相同的运维故障现象，智能体能输出稳定、可复现的诊断逻辑与修复方案；同时配置 timeout 与 max_tokens 以防止长尾延迟与资源溢出，保障服务的高可用性。
+4. 使用结构化输出（Structured Output）：传统的 LLM 输出为非结构化文本，难以被下游程序直接解析。在本实验中，学生需利用 LangChain 的 with_structured_output 功能或 Pydantic 模型定义，强制智能体以 JSON 或特定数据格式返回结果。例如，要求智能体在查询微服务状态时，必须返回包含 service_name、status、error_log 字段的 JSON 对象。这一步骤确保了智能体输出的可预测性与机器可读性，为后续自动化脚本的调用奠定基础。
+5. 引入对话记忆（Memory Management）：微服务运维往往涉及多轮交互的故障排查过程（如“先查日志，再看监控，最后重启”）。学生需在智能体中引入记忆模块（如 ConversationBufferMemory 或 EntityMemory），使智能体能够记录并引用历史对话上下文。通过记忆机制，智能体能够理解指代关系（如用户询问“它现在的状态如何？”时，智能体知晓“它”指代上一轮提到的 productpage 服务），从而实现类人的连贯交互体验。
+6. 创建并运行智能体（Agent Initialization & Execution）：最后，学生需将上述组件（LLM、Tools、Prompt、Memory）组装为完整的智能体执行链（Agent Executor）。在 LangChain 中，这通常涉及实例化 create_react_agent 或构建 LangGraph 工作流。运行阶段，智能体将进入 ReAct（Reasoning + Action）循环：接收用户自然语言指令 -> 思考规划 -> 选择工具执行 -> 观察结果 -> 再次思考或输出最终结论。通过本步骤，学生将完成从静态代码到动态智能服务的转化，实现对微服务系统的智能化辅助运维。
+4. 案例流程
+4.1 配置开发环境
+通过 conda 或 uv 创建基于 python 3.11 的开发环境。
+uv init --python 3.11
+ 安装依赖库。
+# 安装 LangChain 的核心组件
+uv add langchain langchain_community langchain_core
+ 
+# 安装 OpenAI 的 python SDK
+uv add langchain-openai
+ 
+# 或通过 requirements.txt 安装
+uv add -r requirements.txt
+4.2 创建基于 Langchain 的项目
+ 一个经典的基于 Langchian 的项目，其代码结构一般如下图所示：
+[图片]
+ 其中 main.py 为程序的入口，对于 core 目录，将所有工具实现放在 tools 目录下，工具实现的辅助函数放在 helper 目录下，Agent 的提示词放在 prompts 目录下，最后通过 agent_builder.py 创建智能体，调用 tools 中的工具。
+4.3 配置大模型 API 的密钥和地址
+在官方网站或中转网站申请 API key 之后，可以通过硬编码的方式或环境变量的方式配置 agent 所使用的大模型服务。下面的代码展示了如何通过硬编码的方式配置 API Key。
+def init_llm():
+    llm = ChatOpenAI(
+        model="模型名称",
+        api_key="自己申请的 API Key",
+        base_url="代理服务地址",
+        temperature=0,
+        max_retries=2,
+    )
+    return llm
+ 如果需要通过环境变量的方式配置 API Key 和 Base URL，那么首先需要加载环境变量：
+# Linux：
+export OPENAI_API_KEY ="你的 Open AI 密钥"
+export OPENAI_BASE_URL="你的 Open AI 代理地址"
+# Windows：
+$env: OPENAI_API_KEY ="你的 Open AI 密钥"
+$env: OPENAI_BASE_URL="你的 Open AI 代理地址"
+ 然后在程序中读取环境变量。
+def init_llm():
+    api_key = os.getenv("OPENAI_API_KEY")
+    base_url = os.getenv("OPENAI_API_BASE_URL")
+    llm = ChatOpenAI(
+        model="模型名称",
+        api_key=api_key,
+        base_url=base_url,
+        temperature=0,
+        max_retries=2,
+    )
+    return llm
+4.4 配置提示词（Prompt）
+ 对于主要的 ReAct Agent ，我们需要通过提示词来配置它的角色、逻辑和约数。示例项目所使用的提示词如下：
+system_template = """
+You are a DevOps assistant that can use tools to complete tasks step-by-step.
+You have access to the following tools: {tool_names}.
+Tools descriptions: {tools}
+ 
+Think before taking action. Only stop when you are confident the full task is complete.
+Don't modify any file except you generated.
+ 
+Network tip: If encountering git protocol issues in Docker, use:
+RUN git config --global url."https://github.com/".insteadOf git://github.com/
+"""
+ 
+ 
+prompt = ChatPromptTemplate.from_messages([
+    ("system", system_template),
+    MessagesPlaceholder("agent_scratchpad"),  # 消息占位符
+    ("human", "{input}"),
+])
+4.5 实现智能体调用的工具
+ 在示例项目中，智能体主要会使用到的工具有：文件读写工具、Docker File 生成工具、Docker Image 构建工具、容器运行工具、容器内命令执行工具与错误定位工具。这些工具均是通过开发者编码实现的。
+ 值得注意的是，工具函数的实现都必须加上函数注释，langchain 会从函数的注释中提取工具的描述，如果函数没有注释，那么就只能提取到工具名称和工具参数，工具描述会为空。
+4.5.1 文件读写工具的实现
+ 文件读写工具通过对 python 文件读写接口的进一步封装实现。
+def write_file(content, file_path):
+    try:
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return f"Successfully wrote content to {file_path}"
+    except Exception as e:
+        return f"Failed to write to file {file_path}: {str(e)}"
+ 
+def read_file(file_path):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+    except FileNotFoundError:
+        return f"{file_path} doesn't exist"
+return content
+ 
+@tool("file_read_tool")
+def file_read_tool(file_path: str):
+    """
+    read contents of a file
+ 
+    Args:
+        file_path: the path of this file
+    """
+    return read_file(file_path)
+ 
+@tool("file_write_tool")
+def file_write_tool(content: str, file_path: str):
+    """
+    Write content into a file at the specified path.
+ 
+    Args:
+        content: The content to write into the file.
+        file_path: The full path of the file to be written.
+    """
+    return write_file(content, file_path)
+4.5.2 Docker File 生成工具的实现
+ Docker File 生成工具的实现逻辑为：通过预定义的提示词，调用大模型，让大模型生成 Docker File 的内容。
+@tool("dockerfile_generate_tool")
+def dockerfile_generate_tool(readme_path: str, project_path, save_path: str):
+    """
+    Generate contents of a DockerFile based on README.md, and save the DockerFile in a specific path
+ 
+    Args:
+        - readme_path: path of README.md
+        - project_path: path of the project where the Dockerfile works
+        - save_path: path of the saved Dockerfile
+    """
+    requirement = read_file(readme_path)
+    prompt = prompt_template.format(requirement=requirement, project_path=project_path)
+    # setup_proxy("http://127.0.0.1:7890")
+    response = llm.invoke(
+        prompt
+    )
+    dockerfile_text = response.content.strip().replace("```dockerfile", "").replace("```","")
+ 
+    # write content
+    # return dockerfile_text
+    return write_file(dockerfile_text, save_path) + diagnosis_sentence
+ 对应的提示词如下：
+prompt_template = """
+generate a complete and functional Dockerfile for a project based on the following requirements.
+ 
+Note the content:
+- Only use the simplest method mentioned in requirements to run app
+- Only use the image required in requirements
+ 
+requirements:
+{requirement}
+ 
+ 
+Output ONLY the Dockerfile content, no explanation or extra text.
+"""
+4.5.3 Docker Image 构建工具的实现
+ Docker Image 构建工具通过使用 python 运行 docker build 命令实现。下面的实现还包括了日志的记录。
+@tool("image_build_tool")
+def image_build_tool(docker_file_path: str, image_tag: str):
+    """
+    Build a Docker image from a specific Dockerfile.
+ 
+    Args:
+        docker_file_path (str): Path to the Dockerfile (relative to build context)
+        image_tag (str): Tag name for the resulting image
+    """
+    original_dir = os.getcwd()
+    docker_dir = os.path.dirname(docker_file_path)
+    dockerfile_name = os.path.basename(docker_file_path)
+    os.chdir(docker_dir)
+    cmd = [
+        "docker", "build",
+        "-t", image_tag,
+        "-f", dockerfile_name,
+        '.'
+    ]
+ 
+    full_log = []
+    try:
+        remove_image(image_tag)
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+ 
+        for line in proc.stdout:
+            full_log.append(line)
+ 
+        proc.stdout.close()
+ 
+    except Exception as e:
+        full_log = [f"Exception occurred: {str(e)}"]
+        pass
+    finally:
+        os.chdir(original_dir)
+ 
+    return ''.join(full_log) + diagnosis_sentence
+4.5.4 容器运行工具的实现
+ 容器运行工具通过使用 python 运行 docker run 命令实现。
+@tool("container_run_tool")
+def container_run_tool(
+        image_tag: str,
+        container_name: str,
+        internal_port: int,
+        expose_port: int
+):
+    """
+        start and run a Docker container from a specified image.
+ 
+        Args:
+            image_tag: The tag of the image to run the container from.
+            container_name: The name to assign to the new container.
+            internal_port: Port used inside the container.
+            expose_port: The host port to map to the container's internal port 9528.
+    """
+    cmd = ["docker","run","-d","--name",container_name,"-p",f"{expose_port}:{internal_port}", image_tag]
+ 
+    full_log = []
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+ 
+        for line in proc.stdout:
+            full_log.append(line)
+ 
+        proc.stdout.close()
+ 
+    except Exception as e:
+        full_log.append(f"Unexpected error during container run: {str(e)}\n")
+ 
+    return ''.join(full_log) + diagnosis_sentence
+4.5.5 容器内命令执行工具的实现
+ 容器内命令执行工具是通过对 docker 库的 exec_run 函数进行进一步封装实现的。
+@tool("container_exec_cmd_tool")
+def container_exec_cmd_tool(container_name, command: str):
+    """
+       Execute a shell command inside an already running Docker container.
+ 
+       Args:
+           container_name: The name of the container.
+           command: The command to execute
+       """
+    client = docker.from_env()
+    try:
+        container = client.containers.get(container_name)
+ 
+        # Run the command with both stdout and stderr captured
+        exit_code, output = container.exec_run(
+            cmd=command,
+            stdout=True,
+            stderr=True,
+            demux=False,  # If True: returns (stdout, stderr); if False: returns combined
+            tty=False
+        )
+ 
+        output_text = output.decode(errors="ignore")  # prevent decode error
+        return f"Exit code: {exit_code}\n\n Output:\n{output_text}" + diagnosis_sentence
+ 
+    except NotFound:
+        return f"Container '{container_name}' not found." + diagnosis_sentence
+    except Exception as e:
+        return f"Failed to execute command: {str(e)}" + diagnosis_sentence
+4.5.6 错误定位工具
+ 错误定位工具和 Docker File 生成工具类似，输入错误信息 failure_msg ，通过预定义的提示词，让大模型生成错误分析。
+@tool("failure_diagnosis_tool")
+def failure_diagnosis_tool(failure_msg: str):
+    """
+    identify the failure reason and suggest a solution
+ 
+    Args:
+        failure_msg: details about current failure
+    """
+    search_tool = init_search_util()
+ 
+    # Format the prompt with the failure message
+    search_res = search_tool.run(failure_msg)
+    prompt = prompt_template.format(failure_msg=failure_msg, search_res=search_res)
+ 
+    # Call the LLM with the prompt
+    # setup_proxy("http://127.0.0.1:7890")
+    response = llm.invoke(prompt)
+    return response.content
+ 对应的提示词如下：
+prompt_template = """
+You are an expert DevOps engineer.
+ 
+Failure Details:
+----------------
+{failure_msg}
+ 
+Results by searching in internet:
+----------------
+{search_res}
+ 
+Please locate the root cause and provide a solution strategy. Your response should:
+1. Identify the likely cause of the error and suggest a solution
+2. output results in one line, don't exceed 100 words
+ 
+Only include helpful technical information. Do not ask for user confirmation.
+"""
+4.6 智能体构建
+ 实现所有的提示词和工具之后，就可以使用 langchain 提供的 initialize_agent 接口 创建一个 ReAct 智能体。在示例项目中，我们指定智能体类型为 STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION，代表这个智能体是遵循结构化输出，零样本提示，并使用 ReAct 的行为模式进行工作。
+from langchain.agents import create_react_agent, AgentExecutor, initialize_agent, AgentType
+from langchain_community.utilities import GoogleSerperAPIWrapper
+from langchain_core.tools import Tool
+ 
+from core.helper.llm_util import init_llm
+from core.tools.docker_tools import container_run_tool, image_build_tool, container_exec_cmd_tool, \
+    dockerfile_generate_tool
+from core.tools.failure_tools import failure_diagnosis_tool
+from core.tools.file_tools import file_read_tool, file_write_tool
+from core.prompts.ops_agent_prompt import prompt
+ 
+ 
+class OpsAgent:
+    def __init__(self, logger):
+        self.logger = logger
+        self.llm = init_llm()
+ 
+ 
+        tools = [
+            dockerfile_generate_tool,
+            file_read_tool,
+            file_write_tool,
+            image_build_tool,
+            container_run_tool,
+            container_exec_cmd_tool,
+            failure_diagnosis_tool,
+        ]
+ 
+        from langchain.memory import ConversationBufferMemory
+ 
+        self.agent = initialize_agent(
+            tools=tools,
+            llm=self.llm,
+            agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+            prompt=prompt,
+            verbose=True,
+            max_iterations=30
+        )
+ 
+    def invoke(self, query):
+        response = self.agent.invoke({"input": query})
+        print(f"Final Answer: {response}")
+4.7 运行智能体
+ 最后可以通过 Langchain 提供的 invoke 方法启动智能体的执行，在 4.6 实现的 OpsAgent 类中，我们已经将 Langchain 提供的 invoke 方法封装到 OpsAgent 的 invoke 方法中，因此在 main.py 中只需要调用 OpsAgent.invoke() 即可。
+from core.helper.logger import get_logger
+from core.agent_builder import OpsAgent
+ 
+import random
+import numpy as np
+ 
+def random_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+ 
+def main():
+    random_seed(42)
+    log_dir = f"./output/logs"
+ 
+    logger = get_logger(save_dir=log_dir, task_name=f"gitAgent")
+ 
+    ops_agent = OpsAgent(logger)
+    user_input = """1. Read the requirements in vue-paper-dashboard/README.md and outputs a Dockerfile for the project
+    2. Runs the Dockerfile to build a Docker image named vue-paper-dashboard and runs a container (exposing external port 8080) based on the image.
+    """
+    # 3. Executes the test command npx jest tests/unit/utils/validate.spec.js inside the container my-vue-container.
+ 
+    ops_agent.invoke(user_input)
+ 
+ 
+if __name__ == "__main__":
+    main()
+ 通过 python 或 uv 运行 main.py 文件。
+# python
+python main.py
+ 
+# uv
+uv run main.py
+ 观察控制台的输出，可以发现控制台中 Agent 的观测（Observation）和思考（Thought）交替输出，并且在思考之后会输出一个工具的调用作为其当前与环境交互的动作。说明我们实现的 Agent 确实能够观察到环境的状态，并且利用我们提供的工具与环境进行交互，最终完成我们的任务。
+
+ 智能体成功部署我们要求其部署的项目之后，访问本地的 8002 端口，成功访问，说明智能体成功完成了我们布置的任务。
+ 
+
+5 案例思考
+1. 展示的案例只完成了 docker 镜像的构建与部署，能否对其进行进一步扩展，将服务自动部署到 Kubernetes 集群？包括编写 Deployment 和 Service 配置文件，创建必要的命名空间，并在集群中运行该服务，使其能够通过集群外部访问。
+2. 目前我们写的 OpsAgent 其实非常不稳定，一旦中间某个环节出错（如 DockerFile 生成出错导致 docker build 失败），那么智能体会陷入效率很低的出错-重试循环，导致等待时间大幅延长甚至任务失败。能否通过一些策略，实现智能体系统的多步骤计划、状态跟踪、工具链集成和循环自恢复呢？当然，这也是当前智能体领域最前沿的研究方向，欢迎同学们投身于相关的研究。
+
+
+实验三补充内容：实验任务与应用场景
+
+---
+5. 实验任务与应用场景
+5.1 实验任务概述
+在掌握智能体的基本构建方法之后，本实验要求学生结合前两次实验所积累的技术栈——包括 Docker 容器化、Kubernetes 集群编排、Prometheus 监控采集、Jaeger 分布式追踪以及 Chaos Mesh 故障注入——自主设计并实现一个具备实际运维价值的智能体应用。
+与前两次实验的结构化步骤引导不同，本实验采用开放式任务设计：学生需要在理解智能体工具调用与 ReAct 循环机制的基础上，自行确定应用场景、设计工具集、编写提示词，并完成智能体的构建与验证。这一过程不仅考验技术实现能力，更着重培养学生将"AI 技术"与"工程问题"相融合的系统思维。
+本实验提供四个参考场景（见 5.2 节），学生可从中任选其一深入实现，也可以结合多个场景进行综合扩展。鼓励学生在参考场景的基础上提出自己的创意。
+
+---
+5.2 参考应用场景
+场景一：智能监控问答助手
+场景描述
+在实验二中，我们通过 Python 脚本调用 Prometheus API，手动编写 PromQL 查询语句来获取集群的 CPU 占用率、内存使用量、Pod 重启次数等指标。这种方式要求运维人员具备 PromQL 语法知识，使用门槛较高。
+本场景要求学生将 Prometheus 查询能力封装为智能体工具，使运维人员可以通过自然语言向智能体提问，由智能体自主选择合适的 PromQL 查询语句、调用 Prometheus API、汇总数据并生成可读的分析报告。
+典型交互示例
+用户：现在 bookinfo 各个服务的内存占用情况怎么样？
+智能体：（自动查询 Prometheus）
+       productpage 当前内存占用最高，为 303 MiB；
+       details 和 ratings 占用较低，分别为 54 MiB 和 47 MiB；
+       三个 reviews 版本合计占用约 435 MiB。
+       整体内存使用在正常范围内，无异常。
+
+用户：reviews-v2 最近五分钟的 CPU 使用趋势如何？
+智能体：（自动查询时序数据并生成描述）...
+技术要点
+学生需要思考如何将 Prometheus 的查询接口封装为多个具有清晰语义的工具（如"查询单个 Pod 的 CPU 使用率"、"查询命名空间下所有 Pod 的内存排名"等），并通过精心设计的工具描述（Description）引导 LLM 在不同问题下选择正确的工具组合。进阶实现可结合 matplotlib 等可视化库，让智能体在回答数据趋势问题时自动生成折线图。
+
+---
+场景二：故障注入与智能诊断闭环
+场景描述
+实验二展示了如何通过 Chaos Mesh 向 bookinfo 微服务系统注入网络分区、CPU 压力等故障，并通过 Jaeger 和 Prometheus 观察系统变化。然而，这一过程仍依赖运维人员的人工分析：读取 Prometheus 指标、查看 Jaeger 调用链、翻阅 Pod 日志，最终得出结论。
+本场景要求学生构建一个能够自主完成故障诊断闭环的智能体。当用户以自然语言描述异常现象时，智能体应主动调用多种工具收集诊断依据，综合分析后输出根因定位与修复建议。
+典型交互示例
+用户：productpage 访问变慢了，帮我排查一下。
+智能体：正在排查，请稍候……
+       （调用工具：查询 productpage 的 CPU/内存指标）
+       → 发现 CPU 使用率正常，内存无异常。
+       （调用工具：查询近期 Jaeger Trace）
+       → 发现 productpage → reviews 的调用耗时异常，平均延迟达 3.2s。
+       （调用工具：查询 reviews 相关的 Pod 日志）
+       → 日志中未见明显错误。
+       
+       诊断结论：问题可能源于 reviews → ratings 之间存在网络延迟。
+       建议检查是否有活跃的 NetworkChaos 配置，
+       或执行 kubectl describe networkChaos -n bookinfo 确认故障注入状态。
+技术要点
+本场景的核心难点在于多工具的协同调用：智能体需要在一次对话中依次调用 Prometheus 查询、Jaeger HTTP API 查询、kubectl 日志获取等不同类型的工具，并将多源数据综合推理。学生需要思考如何设计工具的粒度（太细则调用步骤繁琐，太粗则缺乏灵活性），以及如何通过提示词引导智能体在信息不足时主动补充查询，而非草率下结论。
+
+---
+场景三：K8s 自动化部署流水线
+场景描述
+实验三的示例项目展示了智能体自动生成 Dockerfile、构建镜像并运行 Docker 容器的能力。然而在真实的生产环境中，服务的最终交付目标是 Kubernetes 集群，而非本地容器。本场景要求学生在示例项目的基础上，将部署能力从 Docker 延伸至 K8s，构建一条覆盖"源码 → 镜像 → K8s 集群"的完整自动化流水线。
+典型任务描述
+用户：请帮我将 bookinfo/src/details 这个服务部署到 K8s 集群中，
+     暴露 9080 端口，副本数为 2，命名空间使用 bookinfo-agent。
+     
+智能体：好的，我将按以下步骤执行：
+       1. 读取项目 README，生成 Dockerfile；
+       2. 构建 Docker 镜像并推送至镜像仓库；
+       3. 生成 Deployment 和 Service 的 K8s YAML 配置文件；
+       4. 创建命名空间 bookinfo-agent（如不存在）；
+       5. 应用配置文件，等待 Pod 就绪；
+       6. 验证服务是否可通过 ClusterIP 访问。
+       开始执行……
+技术要点
+学生需要在实验三示例工具链的基础上新增若干 K8s 相关工具，例如：生成 Deployment/Service YAML 文件的工具（可借助 LLM 生成，类似 Dockerfile 生成工具的思路）、通过 kubernetes Python 客户端执行 kubectl apply 的工具、轮询 Pod 状态直至 Ready 的工具，以及验证 Service 可达性的工具。本场景直接对应实验三的思考题一，工程价值明确，完成后可与实验一的手动部署流程进行横向对比，深刻体会智能体带来的效率提升。
+
+---
+场景四：接入现有智能体平台实现微服务集成
+场景描述
+前三个场景均聚焦于自底向上地构建智能体——从 LangChain 框架出发，逐一实现工具函数。本场景提供另一种视角：将 bookinfo 微服务的能力以标准化接口的形式暴露出来，接入 Dify、Coze、FastGPT 等现有的智能体编排平台，以低代码或无代码的方式构建 AI 应用。
+例如，可以将 Prometheus 查询接口、bookinfo 的业务接口（如获取书籍详情、评分列表等）封装为符合 OpenAPI 规范的 HTTP 工具，在 Dify 等平台上以可视化工作流的方式编排一个"书店智能客服"或"集群状态播报员"。
+典型应用形态
+- 书店智能客服：用户询问"《Kubernetes 实战》这本书的评分怎么样？"，智能体调用 productpage/ratings 接口获取实时数据并回答；
+- 集群状态播报员：定时触发，自动查询 Prometheus 获取各服务健康状态，以结构化报告格式推送给运维团队；
+- 运维问答助手：基于 RAG（检索增强生成）技术，将 K8s 官方文档、Istio 配置手册等作为知识库，回答运维配置相关问题。
+技术要点
+本场景的重点不在于从零编写代码，而在于理解服务接口标准化（如 OpenAPI Spec 的编写）与智能体平台的工具集成机制。学生需要思考：哪些微服务能力适合被暴露为工具？工具的输入/输出如何设计才能便于 LLM 理解和调用？平台内置的 Agent 与自研 LangChain Agent 在灵活性、可控性方面各有哪些优劣？
+
+---
+
+6. 案例思考
+1. 工具设计的粒度问题：在设计智能体工具时，粒度过细会导致调用步骤繁琐、上下文窗口膨胀；粒度过粗则缺乏灵活性、难以应对多样化需求。以你选择的场景为例，你是如何划分工具边界的？这一设计决策对智能体的表现产生了哪些影响？
+2. 提示词的稳定性挑战：在运维场景中，LLM 的输出必须足够稳定和可预测——同一个故障现象，每次诊断的结论应当一致。你在实践中遇到了哪些因提示词设计不当导致智能体行为不稳定的情况？是如何改进的？
+3. 智能体的能力边界：在你实现的应用中，智能体在哪些任务上表现良好，在哪些任务上出现了"幻觉"或错误决策？这是否说明当前 LLM 在某些推理类型上存在固有局限？
+4. K8s 自动部署的安全性：若将场景三中的自动化部署能力开放给真实用户，可能面临哪些安全风险（如误操作删除生产资源、注入恶意配置等）？你会设计哪些"护栏"机制来规避这些风险？
+5. ReAct 循环的效率问题：实验三原始案例的思考题提到，智能体在中间步骤出错时会陷入低效的重试循环。你能否结合 LangGraph 的状态机机制，或借鉴软件工程中的"断路器（Circuit Breaker）"模式，提出一种改善智能体自恢复能力的方案？这也是当前 AI Agent 领域最前沿的研究方向之一，欢迎同学们投身相关研究。
